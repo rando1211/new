@@ -1,0 +1,7 @@
+{
+  "name": "inventory-demand-layer",
+  "private": true,
+  "scripts": {
+    "test:db": "./scripts/test-db.sh"
+  }
+}
