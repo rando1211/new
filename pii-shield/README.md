@@ -102,3 +102,13 @@ on server-side refusal fallbacks. The question is scrubbed too, so asking
 ```bash
 npm test
 ```
+
+## As a shareable Claude skill
+
+`skill/pii-shield/` is a packaged version: Claude inspects the file, writes a
+policy, protects it, analyzes only the safe copy, and hands back a restored
+file. Real values never enter the conversation. Install
+`skill/pii-shield.skill` in claude.ai (Customize → Skills → upload), or copy
+`skill/pii-shield/` into `~/.claude/skills/` for Claude Code.
+
+After changing anything in `src/`, run `./build-skill.sh` and repackage.

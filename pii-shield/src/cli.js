@@ -2,20 +2,63 @@
 import fs from 'node:fs';
 import { Vault } from './vault.js';
 import { protectRecords, assertClean } from './shield.js';
+import { findPII } from './detectors.js';
 
 const USAGE = `pii-shield — keep customer PII out of Claude while still analysing it
+
+  pii-shield inspect <data.csv|.json> [--write-policy policy.json]
+      Column names, fill counts and PII types found, plus a suggested policy.
+      Prints no cell values, so it is safe to show Claude.
 
   pii-shield protect <data.csv|.json> --policy <policy.json> [--vault vault.enc] [--out safe.csv]
       Pseudonymize a file. The safe copy is what you share or upload; the
       encrypted vault (token -> real value) stays with you.
 
-  pii-shield restore <file> --vault vault.enc
+  pii-shield restore <file> --vault vault.enc [--out real.txt]
       Swap tokens in any text (e.g. Claude's answer) back to real values.
+      With --out, writes the file and prints only a count.
 
   pii-shield ask <data.csv|.json> --policy <policy.json> "<question>" [--show-sent]
       Pseudonymize, ask Claude, print the answer with real values restored.
 
-Needs PII_SHIELD_KEY (32+ chars). 'ask' also needs Anthropic credentials.`;
+Key: PII_SHIELD_KEY, else ~/.pii-shield/key (auto-created). 'ask' also needs
+Anthropic credentials.`;
+
+const HEADER_RULES = [
+  [/ssn|social.?sec|card.?(num|no)|^cc_|cvv|password|passport|license.?(num|no)|bank|routing|account.?num/i, 'drop'],
+  [/e-?mail/i, 'tokenize:EMAIL'],
+  [/phone|mobile|cell|tel\b|fax/i, 'tokenize:PHONE'],
+  [/zip|postal/i, 'generalize:zip3'],
+  [/dob|birth/i, 'generalize:year'],
+  [/^age$|_age$/i, 'generalize:age_band'],
+  [/address|street|addr/i, 'tokenize:ADDRESS'],
+  [/^ip$|ip_?addr/i, 'tokenize:IP'],
+  [/(^|_)(first|last|full|middle|customer|client|contact|shopper|lead)?_?name$|^name$/i, 'tokenize:NAME'],
+  [/note|comment|message|body|description|transcript|text|remark/i, 'scan'],
+];
+
+export function inspect(records) {
+  const cols = [...new Set(records.flatMap((r) => Object.keys(r)))];
+  const columns = cols.map((name) => {
+    const vals = records.map((r) => r[name]).filter((v) => v != null && v !== '');
+    const detected = {};
+    let totalLen = 0;
+    for (const v of vals) {
+      totalLen += String(v).length;
+      for (const h of findPII(String(v))) detected[h.type] = (detected[h.type] || 0) + 1;
+    }
+    const byHeader = HEADER_RULES.find(([re]) => re.test(name));
+    let suggested = byHeader ? byHeader[1] : 'keep';
+    if (suggested === 'keep' && Object.keys(detected).length) {
+      const [top] = Object.entries(detected).sort((a, b) => b[1] - a[1]);
+      const avg = vals.length ? totalLen / vals.length : 0;
+      suggested = avg > 40 ? 'scan' : `tokenize:${top[0]}`;
+    }
+    return { name, filled: vals.length, piiFound: detected, suggested };
+  });
+  const policy = { default: 'drop', fields: Object.fromEntries(columns.map((c) => [c.name, c.suggested])) };
+  return { rows: records.length, columns, policy };
+}
 
 function parseArgs(argv) {
   const pos = [];
@@ -77,6 +120,13 @@ async function main() {
   const vault = new Vault();
   const vaultPath = opts.vault || 'vault.enc';
 
+  if (cmd === 'inspect') {
+    const report = inspect(load(pos[0]));
+    if (opts['write-policy']) fs.writeFileSync(opts['write-policy'], JSON.stringify(report.policy, null, 2) + '\n');
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+
   if (cmd === 'protect') {
     const policy = JSON.parse(fs.readFileSync(opts.policy, 'utf8'));
     if (fs.existsSync(vaultPath)) vault.load(vaultPath);
@@ -89,7 +139,13 @@ async function main() {
     console.error(`pii-shield: ${JSON.stringify(audit)} — vault (${vault.size} tokens) saved to ${vaultPath}`);
   } else if (cmd === 'restore') {
     vault.load(vaultPath);
-    process.stdout.write(vault.restore(fs.readFileSync(pos[0] ?? 0, 'utf8')));
+    const text = fs.readFileSync(pos[0] ?? 0, 'utf8');
+    const restored = vault.restore(text);
+    if (opts.out) {
+      fs.writeFileSync(opts.out, restored);
+      const n = [...text.matchAll(/\[[A-Z]+_[0-9a-f]{8}\]/g)].length;
+      console.error(`pii-shield: restored ${n} tokens into ${opts.out}`);
+    } else process.stdout.write(restored);
   } else if (cmd === 'ask') {
     const { analyze } = await import('./claude.js');
     const policy = JSON.parse(fs.readFileSync(opts.policy, 'utf8'));

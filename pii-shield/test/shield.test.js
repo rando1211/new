@@ -125,3 +125,11 @@ test('analyze sends only pseudonymized text and restores the answer', async () =
   assert.ok(!wire.includes('gmail'));
   assert.equal(res.answer, 'Jane Smith has 2 open interests.');
 });
+
+test('inspect suggests a sensible policy and prints no values', async () => {
+  const { inspect } = await import('../src/cli.js');
+  const report = inspect(rows);
+  assert.deepEqual(report.policy, policy);
+  const out = JSON.stringify(report);
+  for (const raw of ['Jane', 'gmail', '555-0142', '90501']) assert.ok(!out.includes(raw), `leaked ${raw}`);
+});

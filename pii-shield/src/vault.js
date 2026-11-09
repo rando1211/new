@@ -1,5 +1,23 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+/**
+ * The secret key, from PII_SHIELD_KEY, else ~/.pii-shield/key (created on
+ * first use, readable only by you). The key never needs to be shown to anyone;
+ * share it only with people who must restore each other's files.
+ */
+export function resolveKey() {
+  if (process.env.PII_SHIELD_KEY) return process.env.PII_SHIELD_KEY;
+  const dir = path.join(os.homedir(), '.pii-shield');
+  const file = path.join(dir, 'key');
+  if (!fs.existsSync(file)) {
+    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(file, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
+  }
+  return fs.readFileSync(file, 'utf8').trim();
+}
 
 // Matches every token the vault can mint, e.g. [EMAIL_3f9a1c2b].
 export const TOKEN_RE = /\[([A-Z]+)_([0-9a-f]{8})\]/g;
@@ -14,7 +32,7 @@ export const TOKEN_RE = /\[([A-Z]+)_([0-9a-f]{8})\]/g;
  * save(), which writes it AES-256-GCM encrypted.
  */
 export class Vault {
-  constructor(key = process.env.PII_SHIELD_KEY) {
+  constructor(key = resolveKey()) {
     if (!key || key.length < 32) {
       throw new Error('PII_SHIELD_KEY must be set to at least 32 characters (e.g. `openssl rand -hex 32`).');
     }
