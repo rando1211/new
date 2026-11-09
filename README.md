@@ -35,3 +35,9 @@ pnpm test:db
 
 With the Supabase CLI and Docker, `supabase db reset` applies the same
 migrations and seed to a local stack.
+
+## Customer data and Claude
+
+`pii-shield/` pseudonymizes shopper PII (names, emails, phones, addresses)
+before any data is sent to Claude, and restores real values in the answer
+locally. See [pii-shield/README.md](pii-shield/README.md).

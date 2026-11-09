@@ -1,0 +1,14 @@
+{
+  "name": "pii-shield",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Middleware that pseudonymizes customer PII before data reaches Claude and restores it in the answer.",
+  "bin": { "pii-shield": "src/cli.js" },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.7.0"
+  }
+}

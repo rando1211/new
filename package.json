@@ -2,6 +2,7 @@
   "name": "inventory-demand-layer",
   "private": true,
   "scripts": {
-    "test:db": "./scripts/test-db.sh"
+    "test:db": "./scripts/test-db.sh",
+    "test:pii": "cd pii-shield && npm test"
   }
 }

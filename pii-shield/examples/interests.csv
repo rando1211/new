@@ -1,0 +1,5 @@
+id,name,email,phone,postal_code,model_key,rooftop,created_at,notes
+1,Jane Smith,Jane.Smith@gmail.com,(310) 555-0142,90501,honda-grom,Del Amo Honda,2026-10-02T14:11:00Z,"Jane wants red, call after 5pm at 310-555-0142"
+2,Carlos Rivera,carlos.r@yahoo.com,+13105550199,90277,kawasaki-ninja-400,Del Amo Kawasaki,2026-10-03T09:40:00Z,Trading in a 2019 Ninja. Lives at 412 Pacific Coast Hwy
+3,Jane Smith,jane.smith@gmail.com,310.555.0142,90501,yamaha-mt-07,Del Amo Yamaha,2026-10-05T18:02:00Z,Second interest from same shopper
+4,Dana Lee,dana@lee-family.net,,90745,honda-grom,Del Amo Honda,2026-10-06T11:20:00Z,"Spoke w/ Mrs. Lee, financing via card 4111 1111 1111 1111 declined"

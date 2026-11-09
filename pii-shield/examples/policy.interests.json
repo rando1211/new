@@ -1,0 +1,14 @@
+{
+  "default": "drop",
+  "fields": {
+    "id": "keep",
+    "name": "tokenize:NAME",
+    "email": "tokenize:EMAIL",
+    "phone": "tokenize:PHONE",
+    "postal_code": "generalize:zip3",
+    "model_key": "keep",
+    "rooftop": "keep",
+    "created_at": "keep",
+    "notes": "scan"
+  }
+}
